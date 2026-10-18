@@ -1,16 +1,19 @@
-# Weather Lakehouse: an end-to-end data pipeline on AWS
+# Weather Lakehouse: an end-to-end data pipeline
 
 A small but complete data-engineering project: it pulls hourly weather data from a public API,
-lands it in an S3 data lake using the **medallion architecture** (bronze / silver / gold), validates it with
-automated data-quality checks, and serves a star schema through **Amazon Athena**. The same code
-runs locally (for development and tests) and on AWS (S3 + Athena).
+stores it in a data lake layout using the **medallion architecture** (bronze / silver / gold), validates it
+with automated data-quality checks, and serves a star schema for SQL analytics. The same code runs on
+local disk (queried with **DuckDB**) and on AWS (S3 + **Amazon Athena**).
+
+**Status:** verified end to end locally with the real API (5 German cities, 31 days) and covered by 60
+automated tests. The AWS path (S3 + Athena) is implemented and documented below, but has not been deployed yet.
 
 ```mermaid
 flowchart LR
     API[Open-Meteo API] -->|extract + retries| B[(Bronze<br/>raw JSON)]
     B -->|parse, type, dedupe<br/>+ quality checks| S[(Silver<br/>hourly Parquet<br/>city/date partitions)]
     S -->|aggregate<br/>+ quality checks| G[(Gold<br/>fact_weather_daily<br/>dim_city)]
-    G --> A[Athena / BI tools]
+    G --> A[SQL analytics<br/>DuckDB local / Athena on AWS]
     S --> A
 ```
 
@@ -80,9 +83,8 @@ only changes where the files live (`STORAGE_BACKEND=s3`), not the pipeline code.
 4. **Query it:** open Athena, set a query-result location, replace `<BUCKET>`/`<PREFIX>` in
    [`sql/athena_ddl.sql`](sql/athena_ddl.sql) and run it, then try [`sql/gold_queries.sql`](sql/gold_queries.sql).
    Silver uses *partition projection*, so no crawler or `MSCK REPAIR TABLE` is needed.
-5. **Schedule it:** [`.github/workflows/daily-run.yml`](.github/workflows/daily-run.yml) runs the pipeline daily via
-   GitHub Actions using OIDC (no long-lived AWS keys). Set the secrets `AWS_ROLE_ARN` and `S3_BUCKET`.
-   Alternatives: EventBridge + Lambda, or Airflow/Dagster for larger setups.
+5. **Schedule it:** e.g. a GitHub Actions workflow on a cron schedule that assumes an IAM role via OIDC
+   (no long-lived AWS keys), EventBridge + Lambda, or Airflow/Dagster for larger setups.
 
 > Cost note: this project stores a few MB and runs a handful of Athena queries, which is
 > far below typical free-tier or cent-level costs. Delete the bucket when you are done.
@@ -113,7 +115,7 @@ sql/                    Athena DDL + analytics queries on the gold layer
 scripts/                query_local.py: run the gold queries locally with DuckDB
 sql_practice/           20 SQL exercises with verified solutions (window functions, SCD2, gaps & islands, ...)
 python_practice/        10 data-engineering Python tasks with tests
-.github/workflows/      CI (pytest) and a scheduled AWS run
+.github/workflows/      CI (pytest on every push)
 ```
 
 ## Ideas to extend it
@@ -129,3 +131,4 @@ python_practice/        10 data-engineering Python tasks with tests
 
 [Open-Meteo](https://open-meteo.com/) historical weather API (free for non-commercial use, no API key).
 The archive lags a few days behind, so the default window is the 7 days ending a week ago.
+
