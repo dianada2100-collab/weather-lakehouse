@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+data/
+*.egg-info/
+.env
+.DS_Store
+.idea/
+BEWERBUNG_NOTIZEN_DE.md
+.idea/
