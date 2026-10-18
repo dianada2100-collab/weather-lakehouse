@@ -1,5 +1,7 @@
 # Weather Lakehouse: an end-to-end data pipeline
 
+![CI](https://github.com/dianada2100-collab/weather-lakehouse/actions/workflows/ci.yml/badge.svg)
+
 A small but complete data-engineering project: it pulls hourly weather data from a public API,
 stores it in a data lake layout using the **medallion architecture** (bronze / silver / gold), validates it
 with automated data-quality checks, and serves a star schema for SQL analytics. The same code runs on
